@@ -1,17 +1,16 @@
 %% Load data
 clc, clear
-data = readtable("Block Data v0.csv");
+data = readtable("Block Data v1.csv");
 demoMat = table2array(data(:, 7 : 28));
-blockX = (data.INTPTLON10);
-blockY = (data.INTPTLAT10);
+blockX = (data.INTPTLON);
+blockY = (data.INTPTLAT);
 
 numBlock = length(blockX);
 
-%% Run Voronoi
+%% Run Voronoi Difference
 clc
 numDist = 11;
 [optim, objVal] = optimizeVoronoiDifference(blockX, blockY, demoMat, numDist);
-
 
 %% Visualize
 clc
@@ -33,7 +32,7 @@ hold off
 
 %% Export labels
 label = memberMat2Labels(memberMat)
-writematrix(label, "Block labels.csv")
+writematrix(label, "Block Labels v1.csv")
 
 %% Functions
 

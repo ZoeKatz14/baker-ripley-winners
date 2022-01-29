@@ -1,9 +1,9 @@
 %% Load data
 clc, clear
-data = readtable("Block Data v0.csv");
+data = readtable("Block Group Data v0.csv");
 demograph = table2array(data(:, 7 : 28));
-blockX = (data.INTPTLON10);
-blockY = (data.INTPTLAT10);
+blockX = (data.INTPTLON);
+blockY = (data.INTPTLAT);
 
 numBlock = length(blockX);
 
@@ -11,7 +11,8 @@ numBlock = length(blockX);
 clc
 numDist = 11;
 diffTol = 0.05;
-[optim, obj] = runGA(numDist, numBlock, demograph, blockX, blockY, diffTol);
+[fun,nvar,A,b,Aeq,beq,lb,ub,nonlcon,intcon,options] = initGA(numDist, numBlock, demograph, blockX, blockY, diffTol);
+[optim, obj] = runGA(fun,nvar,A,b,Aeq,beq,lb,ub,nonlcon,intcon,options);
 
 %% Functions
 function memberMat = memberVec2Mat(memberVec, numDist, numBlock)
@@ -57,10 +58,10 @@ for demoId = 1 : nDemo
             A(counter, (distId - 1 ) * nBlock + blockId) = demograph(blockId, demoId);
             A(counter + 1, (distId - 1 ) * nBlock + blockId) = -1 * demograph(blockId, demoId);
             b(counter) = meanDemo * (1 - tol);
-            b(counter) = meanDemo * (tol - 1);
-            counter = counter + 2;
-            counter / nvars
+            b(counter) = -1 * meanDemo * (tol - 1);
         end
+        counter = counter + 2;
+        counter / (nDemo * nDist * 2)
     end
 end
 end
@@ -70,7 +71,7 @@ memberMat = memberVec2Mat(memberVec, numDist, numBlock);
 avgCompact = computeTotalCompactness(memberMat, numDist, blockX, blockY);
 end
 
-function [optim, obj] = runGA(numDist, numBlock, demograph, blockX, blockY, diffTol)
+function [fun,nvar,A,b,Aeq,beq,lb,ub,nonlcon,intcon,options] = initGA(numDist, numBlock, demograph, blockX, blockY, diffTol)
 fun = @(memberVec) objFun(memberVec, numDist, numBlock, blockX, blockY);
 nvar = numDist * numBlock;
 [A, b] = buildConstraint(numDist, numBlock, demograph, diffTol);
@@ -82,11 +83,14 @@ intcon = 1 : nvar;
 
 Aeq = [];
 for distInd = 1 : numDist
-    Aeq = horzcat(Aeq, eye(numBlock));
+    Aeq = (horzcat(Aeq, eye(numBlock)));
+    distInd / numDist
 end
 
 options=optimoptions('GA','Display','iter');
+end
 
+function [optim, obj] = runGA(fun,nvar,A,b,Aeq,beq,lb,ub,nonlcon,intcon,options)
 [optim, obj] = ga(fun,nvar,A,b,Aeq,beq,lb,ub,nonlcon,intcon,options);
 end
 
