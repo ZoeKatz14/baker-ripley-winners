@@ -15,6 +15,8 @@ library(PL94171)
 library(sf)
 library(ggplot2)
 library(readxl)
+library(RColorBrewer)
+library(reshape2)
 
 dta <- pl_read("~/Downloads/tx2020.pl.zip")
 
@@ -24,7 +26,7 @@ block_group <- pl_subset(dta, sumlev = "150")
 
 write.csv(block, "~/Desktop/block.csv")
 
-harris_county_block <- subset(block, COUNTY == "201", select = c("GEOID", "STATE", "PLACENS", "BLKGRP", "BLOCK", "P0040001", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010", "P0040011", "P0020001", "P0020002", "P0020003", "P0020004", "P0020005", "P0020006", "P0020007", "P0020008", "P0020009", "P0020010", "P0020011"))
+harris_county_block <- subset(block, COUNTY == "201", select = c("GEOID", "STATE", "PLACENS", "BLKGRP", "BLOCK", "P0040001", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010", "P0040011", "P0020001", "P0020002", "P0020003", "P0020004", "P0020005", "P0020006", "P0020007", "P0020008", "P0020009", "P0020010", "P0020011", "INTPTLON", "INTPTLAT"))
 
 harris_county_block <- subset(block, PLACENS == "02410796", select = c("GEOID", "STATE", "PLACENS", "BLKGRP", "BLOCK", "P0040001", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010", "P0040011", "P0020001", "P0020002", "P0020003", "P0020004", "P0020005", "P0020006", "P0020007", "P0020008", "P0020009", "P0020010", "P0020011"))
 
@@ -39,7 +41,7 @@ write.csv(harris_county_block, "~/Desktop/blockdata.csv")
 
 
 ```{r}
-block_shape <- st_read("~/Downloads/blocks")
+block_shape <- st_read("~/Desktop/blocks")
 block_shape2 <- st_read("~/Downloads/tl_2017_48_tabblock10")
 
 harris_shape <- subset(block_shape2, COUNTYFP10 == "201")
@@ -57,24 +59,189 @@ write.csv(harris_center, "~/Desktop/harrisCenter.csv")
 
 harris_2020 <- subset(block_shape, CNTY = "201")
 
-labeled <- read_xlsx("~/Desktop/Block Labels v0.xlsx")
+labeled <- read_xlsx("~/Desktop/Labeled.xlsx")
 labeled$SCTBKEY <- labeled$GEOID
 
 labeled_shape <- merge(labeled, harris_2020, by = "SCTBKEY")
-labeled_shape$Label <- as.factor(labeled_shape$Label)
+labeled_shape$Label <- as.factor(labeled_shape$...31)
 
-ggplot(labeled_shape) +
-  geom_sf(aes(fill = Label, geometry = geometry), color = NA) +
-  scale_fill_brewer(palette="RdPu")
+ggplot() +
+  geom_sf(data = labeled_shape, aes(fill = Label, geometry = geometry), color = NA) +
+  scale_fill_brewer(palette="Paired") +
+  labs(main = "New Districts", fill = "District") +
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.background=element_blank(),panel.border=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),plot.background=element_blank())
+
+  
 
 block$GEOID10 <- block$GEOID
 
 more <- merge(block, harris_shape, by = "GEOID10")
 
 
-more <- subset(more, select = c("GEOID", "STATE", "PLACENS", "BLKGRP", "BLOCK", "P0040001", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010", "P0040011", "P0020001", "P0020002", "P0020003", "P0020004", "P0020005", "P0020006", "P0020007", "P0020008", "P0020009", "P0020010", "P0020011", "INTPTLON", "INTPTLON"))
+more <- subset(more, select = c("GEOID", "STATE", "PLACENS", "BLKGRP", "BLOCK", "P0040001", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010", "P0040011", "P0020001", "P0020002", "P0020003", "P0020004", "P0020005", "P0020006", "P0020007", "P0020008", "P0020009", "P0020010", "P0020011", "INTPTLON", "INTPTLAT"))
 
-write.csv(more, "~/Desktop/nonlabeled.csv")
+write.csv(harris_county_block, "~/Desktop/nonlabeledGroups.csv")
 
+bar_data <- subset(labeled_shape, select = c("Label", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010"))
+
+bar_data$`Hispanic or Latino` <- bar_data$P0040002
+bar_data$`Not Hispanic or Latino` <- bar_data$P0040003
+bar_data$`Pop of One Race` <- bar_data$P0040004
+bar_data$`White` <- bar_data$P0040005
+bar_data$`Black` <- bar_data$P0040006
+bar_data$`American Indian/Alaska Native` <- bar_data$P0040007
+bar_data$`Asian Alone` <- bar_data$P0040008
+bar_data$`Native Hawaiian` <- bar_data$P0040009
+bar_data$`Other` <- bar_data$P0040010
+
+bar_data_race <- subset(bar_data, select = c("Label", "White", "Black", "American Indian/Alaska Native", "Asian Alone", "Native Hawaiian", "Other"))
+
+
+stacked_data <- melt(bar_data_race, id.vars = c("Label"))
+
+
+ggplot(stacked_data, aes(x = Label, y = value, fill = variable)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_brewer(palette = "Purples", direction = -1) +
+  labs(x = "District Label", y = "Percentage", fill = "Race") +
+  ggtitle("Voting Age Population District Demographics")
+
+
+bar_data_hispanic <- subset(bar_data, select = c("Label", "Hispanic or Latino", "Not Hispanic or Latino"))
+
+stacked_data <- melt(bar_data_hispanic, id.vars = c("Label"))
+
+ggplot(stacked_data, aes(x = Label, y = value, fill = variable)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_brewer(palette = "Purples") +
+  labs(x = "District Label", y = "Percentage", fill = "Race") +
+  ggtitle("Voting Age Population District Demographics of Hispanics")
+
+
+
+bar_data_total <- subset(labeled_shape, select = c("Label", "P0020002", "P0020003", "P0020004", "P0020005", "P0020006", "P0020007", "P0020008", "P0020009", "P0020010"))
+
+bar_data_total$`Hispanic or Latino` <- bar_data_total$P0020002
+bar_data_total$`Not Hispanic or Latino` <- bar_data_total$P0020003
+bar_data_total$`Pop of One Race` <- bar_data_total$P0020004
+bar_data_total$`White` <- bar_data_total$P0020005
+bar_data_total$`Black` <- bar_data_total$P0020006
+bar_data_total$`American Indian/Alaska Native` <- bar_data_total$P0020007
+bar_data_total$`Asian Alone` <- bar_data_total$P0020008
+bar_data_total$`Native Hawaiian` <- bar_data_total$P0020009
+bar_data_total$`Other` <- bar_data_total$P0020010
+
+bar_data_race <- subset(bar_data_total, select = c("Label", "White", "Black", "American Indian/Alaska Native", "Asian Alone", "Native Hawaiian", "Other"))
+
+
+stacked_data <- melt(bar_data_race, id.vars = c("Label"))
+
+
+ggplot(stacked_data, aes(x = Label, y = value, fill = variable)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_brewer(palette = "Purples", direction = -1) +
+  labs(x = "District Label", y = "Percentage", fill = "Race") +
+  ggtitle("Total Population District Demographics")
+
+
+bar_data_hispanic <- subset(bar_data_total, select = c("Label", "Hispanic or Latino", "Not Hispanic or Latino"))
+
+stacked_data <- melt(bar_data_hispanic, id.vars = c("Label"))
+
+ggplot(stacked_data, aes(x = Label, y = value, fill = variable)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_brewer(palette = "Purples", direction = -1) +
+  labs(x = "District Label", y = "Percentage", fill = "Race") +
+  ggtitle("Total Population District Demographics of Hispanics")
+
+
+
+
+
+
+
+write.csv(harris_county_block, "~/Desktop/nonlabeledGroups.csv")
+
+bar_data <- subset(labeled_shape, select = c("Label", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010"))
+
+bar_data$`Hispanic or Latino` <- bar_data$P0040002
+bar_data$`Not Hispanic or Latino` <- bar_data$P0040003
+bar_data$`Pop of One Race` <- bar_data$P0040004
+bar_data$`White` <- bar_data$P0040005
+bar_data$`Black` <- bar_data$P0040006
+bar_data$`American Indian/Alaska Native` <- bar_data$P0040007
+bar_data$`Asian Alone` <- bar_data$P0040008
+bar_data$`Native Hawaiian` <- bar_data$P0040009
+bar_data$`Other` <- bar_data$P0040010
+
+bar_data_race <- subset(bar_data, select = c("Label", "White", "Black", "American Indian/Alaska Native", "Asian Alone", "Native Hawaiian", "Other"))
+
+
+stacked_data <- melt(bar_data_race, id.vars = c("Label"))
+
+
+ggplot(stacked_data, aes(x = Label, y = value, fill = variable)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_brewer(palette = "Purples", direction = -1) +
+  labs(x = "District Label", y = "Percentage", fill = "Race") +
+  ggtitle("Voting Age Population District Demographics")
+
+
+bar_data_hispanic <- subset(bar_data, select = c("Label", "Hispanic or Latino", "Not Hispanic or Latino"))
+
+stacked_data <- melt(bar_data_hispanic, id.vars = c("Label"))
+
+ggplot(stacked_data, aes(x = Label, y = value, fill = variable)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_brewer(palette = "Purples") +
+  labs(x = "District Label", y = "Percentage", fill = "Race") +
+  ggtitle("Voting Age Population District Demographics of Hispanics")
+
+
+
+bar_data_total <- subset(labeled_shape, select = c("Label", "P0020002", "P0020003", "P0020004", "P0020005", "P0020006", "P0020007", "P0020008", "P0020009", "P0020010"))
+
+bar_data_total$`Hispanic or Latino` <- bar_data_total$P0020002
+bar_data_total$`Not Hispanic or Latino` <- bar_data_total$P0020003
+bar_data_total$`Pop of One Race` <- bar_data_total$P0020004
+bar_data_total$`White` <- bar_data_total$P0020005
+bar_data_total$`Black` <- bar_data_total$P0020006
+bar_data_total$`American Indian/Alaska Native` <- bar_data_total$P0020007
+bar_data_total$`Asian Alone` <- bar_data_total$P0020008
+bar_data_total$`Native Hawaiian` <- bar_data_total$P0020009
+bar_data_total$`Other` <- bar_data_total$P0020010
+
+bar_data_race <- subset(bar_data_total, select = c("Label", "White", "Black", "American Indian/Alaska Native", "Asian Alone", "Native Hawaiian", "Other"))
+
+
+stacked_data <- melt(bar_data_race, id.vars = c("Label"))
+
+
+ggplot(stacked_data, aes(x = Label, y = value, fill = variable)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_brewer(palette = "Purples", direction = -1) +
+  labs(x = "District Label", y = "Percentage", fill = "Race") +
+  ggtitle("Total Population District Demographics")
+
+
+bar_data_hispanic <- subset(bar_data_total, select = c("Label", "Hispanic or Latino", "Not Hispanic or Latino"))
+
+stacked_data <- melt(bar_data_hispanic, id.vars = c("Label"))
+
+ggplot(stacked_data, aes(x = Label, y = value, fill = variable)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_brewer(palette = "Purples", direction = -1) +
+  labs(x = "District Label", y = "Percentage", fill = "Race") +
+  ggtitle("Total Population District Demographics of Hispanics")
+
+
+
+data <- subset(block_shape, select = c("VTD"))
 ```
 
