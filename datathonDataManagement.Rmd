@@ -1,0 +1,80 @@
+---
+title: "testing"
+author: "Parker Beck"
+date: "1/28/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(PL94171)
+library(sf)
+library(ggplot2)
+library(readxl)
+
+dta <- pl_read("~/Downloads/tx2020.pl.zip")
+
+block <- pl_subset(dta, sumlev = "750")
+
+block_group <- pl_subset(dta, sumlev = "150")
+
+write.csv(block, "~/Desktop/block.csv")
+
+harris_county_block <- subset(block, COUNTY == "201", select = c("GEOID", "STATE", "PLACENS", "BLKGRP", "BLOCK", "P0040001", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010", "P0040011", "P0020001", "P0020002", "P0020003", "P0020004", "P0020005", "P0020006", "P0020007", "P0020008", "P0020009", "P0020010", "P0020011"))
+
+harris_county_block <- subset(block, PLACENS == "02410796", select = c("GEOID", "STATE", "PLACENS", "BLKGRP", "BLOCK", "P0040001", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010", "P0040011", "P0020001", "P0020002", "P0020003", "P0020004", "P0020005", "P0020006", "P0020007", "P0020008", "P0020009", "P0020010", "P0020011"))
+
+
+harris_county_block_group <- subset(block_group, PLACENS == "02410796", select = c("STATE", "PLACENS", "BLKGRP", "BLOCK", "P0040001", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010", "P0040011"))
+
+write.csv(harris_county_block, "~/Desktop/blockdata.csv")
+
+#harris_county_voting <- subset(voting_district, PLACENS == "02410796", select = c("STATE", "PLACENS", "BLKGRP", "BLOCK", "P0040001", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010", "P0040011"))
+
+```
+
+
+```{r}
+block_shape <- st_read("~/Downloads/blocks")
+block_shape2 <- st_read("~/Downloads/tl_2017_48_tabblock10")
+
+harris_shape <- subset(block_shape2, COUNTYFP10 == "201")
+
+harris_center <- as.data.frame(harris_shape)
+
+harris_center <- subset(harris_center, select = c("GEOID10", "BLOCKCE10", "INTPTLAT10", "INTPTLON10"))
+
+harris_county_block$GEOID10 <- harris_county_block$GEOID
+
+#merged_harris <- merge(block_center, harris_county_block, by = "BLOCKCE10")
+
+write.csv(harris_county_block, "~/Desktop/harrisBlock.csv")
+write.csv(harris_center, "~/Desktop/harrisCenter.csv")
+
+harris_2020 <- subset(block_shape, CNTY = "201")
+
+labeled <- read_xlsx("~/Desktop/Block Labels v0.xlsx")
+labeled$SCTBKEY <- labeled$GEOID
+
+labeled_shape <- merge(labeled, harris_2020, by = "SCTBKEY")
+labeled_shape$Label <- as.factor(labeled_shape$Label)
+
+ggplot(labeled_shape) +
+  geom_sf(aes(fill = Label, geometry = geometry), color = NA) +
+  scale_fill_brewer(palette="RdPu")
+
+block$GEOID10 <- block$GEOID
+
+more <- merge(block, harris_shape, by = "GEOID10")
+
+
+more <- subset(more, select = c("GEOID", "STATE", "PLACENS", "BLKGRP", "BLOCK", "P0040001", "P0040002", "P0040003", "P0040004", "P0040005", "P0040006", "P0040007", "P0040008", "P0040009", "P0040010", "P0040011", "P0020001", "P0020002", "P0020003", "P0020004", "P0020005", "P0020006", "P0020007", "P0020008", "P0020009", "P0020010", "P0020011", "INTPTLON", "INTPTLON"))
+
+write.csv(more, "~/Desktop/nonlabeled.csv")
+
+```
+
